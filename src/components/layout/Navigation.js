@@ -37,6 +37,12 @@ export default function Navigation() {
             >
               Home
             </Link>
+            <Link 
+              href="/users" 
+              className="text-gray-700 hover:text-red-500 transition-colors"
+            >
+              Users
+            </Link>
             
             {process.env.NODE_ENV === 'development' && (
               <Link 
@@ -122,6 +128,13 @@ export default function Navigation() {
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Home
+              </Link>
+              <Link 
+                href="/users" 
+                className="block px-3 py-2 text-gray-700 hover:text-red-500 transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Users
               </Link>
               
               {process.env.NODE_ENV === 'development' && (

@@ -3,48 +3,73 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { quotesApi, authApi } from '@/lib/api';
+import { quotesApi } from '@/lib/api';
 import QuoteCard from '@/components/quotes/QuoteCard';
 import Button from '@/components/ui/Button';
-import { formatDate } from '@/lib/utils';
-import { Heart, User, Calendar, ArrowLeft, Quote } from 'lucide-react';
+import { Heart, User, ArrowLeft, Quote } from 'lucide-react';
 
 export default function UserQuotesPage() {
   const params = useParams();
-  const [user, setUser] = useState(null);
   const [quotes, setQuotes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [userInfo, setUserInfo] = useState({
+    id: '',
+    username: '',
+    quoteCount: 0
+  });
+
+  // Extract and validate userId
+  const userId = params.userId;
 
   useEffect(() => {
+    // Check if userId is valid before proceeding
+    if (!userId || userId === 'undefined') {
+      setError('Invalid user ID. Please check the URL.');
+      setIsLoading(false);
+      return;
+    }
+    
     loadUserAndQuotes();
-  }, [params.userId, page]);
+  }, [userId, page]);
 
   const loadUserAndQuotes = async () => {
     try {
       setIsLoading(true);
       setError(null);
       
-      // Load user profile and quotes in parallel
-      const [userData, quotesData] = await Promise.all([
-        authApi.getUserProfile(params.userId),
-        quotesApi.getByUser(params.userId, { page, limit: 10 })
-      ]);
+      // Load user quotes
+      const response = await quotesApi.getByUser(userId, { page, limit: 10 });
       
-      setUser(userData);
-      
-      if (page === 1) {
-        setQuotes(quotesData.quotes || []);
+      if (response.quotes && response.quotes.length > 0) {
+        if (page === 1) {
+          setQuotes(response.quotes);
+        } else {
+          setQuotes(prev => [...prev, ...response.quotes]);
+        }
+        setHasMore(response.quotes.length === 10);
+        
+        // Extract user info from first quote
+        const firstQuote = response.quotes[0];
+        setUserInfo({
+          id: userId,
+          username: firstQuote.author_name || firstQuote.author_username || 'Unknown User',
+          quoteCount: response.total || response.quotes.length
+        });
       } else {
-        setQuotes(prev => [...prev, ...(quotesData.quotes || [])]);
+        setQuotes([]);
+        setHasMore(false);
+        setUserInfo({
+          id: userId,
+          username: 'Unknown User',
+          quoteCount: 0
+        });
       }
-      
-      setHasMore(quotesData.quotes && quotesData.quotes.length === 10);
     } catch (err) {
-      setError('Failed to load user or quotes');
       console.error('Error loading user quotes:', err);
+      setError('Failed to load user quotes. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -94,56 +119,24 @@ export default function UserQuotesPage() {
           </Link>
         </div>
 
-        {/* User Profile Header */}
-        {user && (
-          <div className="bg-white rounded-lg shadow-md p-8 mb-8 text-center">
-            <div className="flex justify-center mb-4">
-              <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center">
-                <User className="h-10 w-10 text-red-500" />
-              </div>
+        {/* User Info */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <div className="flex items-center space-x-4">
+            <div className="h-16 w-16 rounded-full bg-red-100 flex items-center justify-center">
+              <User className="h-8 w-8 text-red-600" />
             </div>
-            
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {user.username}'s Quotes
-            </h1>
-            
-            <div className="flex items-center justify-center space-x-6 text-gray-600 mb-6">
-              <div className="flex items-center space-x-2">
-                <Calendar className="h-5 w-5" />
-                <span>Member since {formatDate(user.created_at)}</span>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-2xl mx-auto">
-              <div className="text-center p-4 bg-red-50 rounded-lg">
-                <div className="text-2xl font-bold text-red-600 mb-2">
-                  {quotes.length}
-                </div>
-                <p className="text-gray-600">Quotes Created</p>
-              </div>
-              
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600 mb-2">
-                  {quotes.reduce((sum, quote) => sum + (quote.likes_count || 0), 0)}
-                </div>
-                <p className="text-gray-600">Total Likes</p>
-              </div>
-              
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-600 mb-2">
-                  {quotes.reduce((sum, quote) => sum + (quote.dislikes_count || 0), 0)}
-                </div>
-                <p className="text-gray-600">Total Dislikes</p>
-              </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">{userInfo.username}</h2>
+              <p className="text-gray-600">{userInfo.quoteCount} quotes</p>
             </div>
           </div>
-        )}
+        </div>
 
         {/* Quotes Section */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">
-              {user ? `${user.username}'s Quotes` : 'User Quotes'}
+              User Quotes
             </h2>
             {quotes.length > 0 && (
               <p className="text-gray-600">
@@ -194,7 +187,7 @@ export default function UserQuotesPage() {
                 No quotes yet
               </h3>
               <p className="text-gray-600 mb-6">
-                {user ? `${user.username} hasn't shared any quotes yet.` : 'This user has no quotes.'}
+                This user has no quotes.
               </p>
 
             </div>

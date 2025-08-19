@@ -25,22 +25,19 @@ export default function HomePage() {
     try {
       setIsLoading(true);
       setError(null);
+      
       const response = await quotesApi.getAll({ page, limit: 10 });
       
-      if (page === 1) {
-        setQuotes(response.quotes || []);
+      if (response.quotes && response.quotes.length > 0) {
+        setQuotes(response.quotes);
+        setHasMore(response.quotes.length === 10);
       } else {
-        setQuotes(prev => [...prev, ...(response.quotes || [])]);
+        setQuotes([]);
+        setHasMore(false);
       }
-      
-      setHasMore(response.quotes && response.quotes.length === 10);
     } catch (err) {
       console.error('Error loading quotes:', err);
-      if (err.status === 0 || err.message === 'Network error') {
-        setError('connection_error');
-      } else {
-        setError('Failed to load quotes');
-      }
+      setError('Failed to load quotes. Please try again.');
     } finally {
       setIsLoading(false);
     }

@@ -1,144 +1,147 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { useState } from 'react';
 import { quotesApi } from '@/lib/api';
-import Button from '@/components/ui/Button';
 
 export default function DebugPage() {
-  const { user, isAuthenticated, token, isLoading: authLoading, error: authError } = useAuth();
-  const [testResult, setTestResult] = useState(null);
-  const [isTesting, setIsTesting] = useState(false);
+  const [testResults, setTestResults] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const testAPI = async () => {
-    setIsTesting(true);
-    setTestResult(null);
+  const addResult = (message, type = 'info') => {
+    setTestResults(prev => [...prev, { message, type, timestamp: new Date().toISOString() }]);
+  };
+
+  const testUserQuotes = async () => {
+    setIsLoading(true);
+    setTestResults([]);
     
     try {
-      // Test quotes API
-      const quotes = await quotesApi.getAll({ limit: 1 });
-      setTestResult({
-        success: true,
-        message: 'API test successful',
-        data: quotes
-      });
+      addResult('🚀 Starting user quotes API test...', 'info');
+      
+      // Test 1: Test with user ID 1
+      addResult('📡 Testing API call to /quotes/user/1', 'info');
+      const response1 = await quotesApi.getByUser('1', { page: 1, limit: 3 });
+      addResult(`✅ User 1 quotes loaded: ${response1.quotes?.length || 0} quotes`, 'success');
+      
+      if (response1.quotes && response1.quotes.length > 0) {
+        const firstQuote = response1.quotes[0];
+        addResult(`📝 First quote: "${firstQuote.content.substring(0, 50)}..."`, 'info');
+        addResult(`👤 Author ID: ${firstQuote.author_id}`, 'info');
+        addResult(`👤 Author Name: ${firstQuote.author_name}`, 'info');
+      }
+      
+      // Test 2: Test with user ID 2
+      addResult('📡 Testing API call to /quotes/user/2', 'info');
+      const response2 = await quotesApi.getByUser('2', { page: 1, limit: 3 });
+      addResult(`✅ User 2 quotes loaded: ${response2.quotes?.length || 0} quotes`, 'success');
+      
+      // Test 3: Test with invalid user ID
+      addResult('📡 Testing API call to /quotes/user/999', 'info');
+      try {
+        const response3 = await quotesApi.getByUser('999', { page: 1, limit: 3 });
+        addResult(`✅ User 999 quotes loaded: ${response3.quotes?.length || 0} quotes`, 'success');
+      } catch (error) {
+        addResult(`❌ User 999 error: ${error.message}`, 'error');
+      }
+      
+      addResult('🎉 All tests completed!', 'success');
+      
     } catch (error) {
-      setTestResult({
-        success: false,
-        message: error.message,
-        error: error
-      });
+      addResult(`❌ Test failed: ${error.message}`, 'error');
+      console.error('Debug test error:', error);
     } finally {
-      setIsTesting(false);
+      setIsLoading(false);
     }
   };
 
-  const testCreateQuote = async () => {
-    if (!isAuthenticated) {
-      setTestResult({
-        success: false,
-        message: 'Not authenticated'
-      });
-      return;
-    }
-
-    setIsTesting(true);
-    setTestResult(null);
+  const testHomepageQuotes = async () => {
+    setIsLoading(true);
+    setTestResults([]);
     
     try {
-      const quote = await quotesApi.create({
-        content: 'This is a test quote from debug page'
-      });
-      setTestResult({
-        success: true,
-        message: 'Quote creation test successful',
-        data: quote
-      });
+      addResult('🚀 Starting homepage quotes API test...', 'info');
+      
+      addResult('📡 Testing API call to /quotes (homepage)', 'info');
+      const response = await quotesApi.getAll({ page: 1, limit: 3 });
+      addResult(`✅ Homepage quotes loaded: ${response.quotes?.length || 0} quotes`, 'success');
+      
+      if (response.quotes && response.quotes.length > 0) {
+        const firstQuote = response.quotes[0];
+        addResult(`📝 First quote: "${firstQuote.content.substring(0, 50)}..."`, 'info');
+        addResult(`👤 Author ID: ${firstQuote.author_id}`, 'info');
+        addResult(`👤 Author Name: ${firstQuote.author_name}`, 'info');
+        addResult(`👤 Author Username: ${firstQuote.author_username}`, 'info');
+      }
+      
+      addResult('🎉 Homepage test completed!', 'success');
+      
     } catch (error) {
-      setTestResult({
-        success: false,
-        message: error.message,
-        error: error
-      });
+      addResult(`❌ Test failed: ${error.message}`, 'error');
+      console.error('Debug test error:', error);
     } finally {
-      setIsTesting(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Debug Page</h1>
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-6xl mx-auto">
+        <h1 className="text-3xl font-bold mb-6">🔧 Debug & Testing Page</h1>
         
-        {/* Authentication Status */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Authentication Status</h2>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p><strong>Loading:</strong> {authLoading ? 'Yes' : 'No'}</p>
-              <p><strong>Authenticated:</strong> {isAuthenticated ? 'Yes' : 'No'}</p>
-              <p><strong>Has User:</strong> {user ? 'Yes' : 'No'}</p>
-              <p><strong>Has Token:</strong> {token ? 'Yes' : 'No'}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-xl font-semibold mb-4">🧪 API Tests</h2>
+            <div className="space-y-4">
+              <button
+                onClick={testUserQuotes}
+                disabled={isLoading}
+                className="w-full bg-blue-500 text-white px-4 py-3 rounded disabled:opacity-50 hover:bg-blue-600"
+              >
+                {isLoading ? 'Testing...' : 'Test User Quotes API'}
+              </button>
+              
+              <button
+                onClick={testHomepageQuotes}
+                disabled={isLoading}
+                className="w-full bg-green-500 text-white px-4 py-3 rounded disabled:opacity-50 hover:bg-green-600"
+              >
+                {isLoading ? 'Testing...' : 'Test Homepage Quotes API'}
+              </button>
             </div>
-            <div>
-              <p><strong>Username:</strong> {user?.username || 'None'}</p>
-              <p><strong>User ID:</strong> {user?.id || 'None'}</p>
-              <p><strong>Token Length:</strong> {token ? token.length : 0}</p>
-              <p><strong>Auth Error:</strong> {authError || 'None'}</p>
+          </div>
+          
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-xl font-semibold mb-4">📊 API Configuration</h2>
+            <div className="space-y-2 text-sm">
+              <p><strong>API Base URL:</strong> {process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5002/api'}</p>
+              <p><strong>Environment:</strong> {process.env.NODE_ENV}</p>
+              <p><strong>Timestamp:</strong> {new Date().toISOString()}</p>
             </div>
           </div>
         </div>
-
-        {/* Environment Variables */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Environment Variables</h2>
-          <div className="text-sm">
-            <p><strong>API URL:</strong> {process.env.NEXT_PUBLIC_API_URL || 'Not set'}</p>
-            <p><strong>Node Env:</strong> {process.env.NODE_ENV}</p>
-          </div>
-        </div>
-
-        {/* API Tests */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">API Tests</h2>
-          <div className="space-y-4">
-            <div className="flex space-x-4">
-              <Button onClick={testAPI} disabled={isTesting}>
-                Test Quotes API
-              </Button>
-              <Button onClick={testCreateQuote} disabled={isTesting || !isAuthenticated}>
-                Test Create Quote
-              </Button>
-            </div>
-            
-            {testResult && (
-              <div className={`p-4 rounded-md ${
-                testResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
-              }`}>
-                <p className={`text-sm ${testResult.success ? 'text-green-800' : 'text-red-800'}`}>
-                  <strong>{testResult.success ? 'Success:' : 'Error:'}</strong> {testResult.message}
-                </p>
-                {testResult.data && (
-                  <pre className="mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto">
-                    {JSON.stringify(testResult.data, null, 2)}
-                  </pre>
-                )}
-                {testResult.error && (
-                  <pre className="mt-2 text-xs bg-red-100 p-2 rounded overflow-auto">
-                    {JSON.stringify(testResult.error, null, 2)}
-                  </pre>
-                )}
-              </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-xl font-semibold mb-4">📋 Test Results</h2>
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {testResults.length === 0 ? (
+              <p className="text-gray-500">No test results yet. Run a test to see results.</p>
+            ) : (
+              testResults.map((result, index) => (
+                <div
+                  key={index}
+                  className={`p-3 rounded border-l-4 ${
+                    result.type === 'success' ? 'border-green-500 bg-green-50' :
+                    result.type === 'error' ? 'border-red-500 bg-red-50' :
+                    'border-blue-500 bg-blue-50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">{result.message}</span>
+                    <span className="text-xs text-gray-500">{result.timestamp}</span>
+                  </div>
+                </div>
+              ))
             )}
-          </div>
-        </div>
-
-        {/* Local Storage */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Local Storage</h2>
-          <div className="text-sm">
-            <p><strong>Token:</strong> {typeof window !== 'undefined' ? (localStorage.getItem('token') ? 'Present' : 'Not found') : 'Server side'}</p>
-            <p><strong>Token Value:</strong> {typeof window !== 'undefined' ? (localStorage.getItem('token') ? `${localStorage.getItem('token').substring(0, 50)}...` : 'None') : 'Server side'}</p>
           </div>
         </div>
       </div>

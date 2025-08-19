@@ -8,11 +8,13 @@ import { formatDate, truncateText } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import { Heart, MessageCircle, ThumbsUp, ThumbsDown, User, Calendar } from 'lucide-react';
 
-export default function QuoteCard({ quote, onReactionUpdate }) {
-  const { isAuthenticated, user } = useAuth();
-  const [isLiking, setIsLiking] = useState(false);
-  const [isDisliking, setIsDisliking] = useState(false);
+export default function QuoteCard({ quote, onReaction, showActions = true }) {
+  const { user } = useAuth();
+  const [isReacting, setIsReacting] = useState(false);
   
+  const authorId = quote.author_id || quote.user_id || quote.author?.id;
+  const authorUsername = quote.author_username || quote.username || quote.author?.username;
+
   // Local state for real-time count updates
   const [localLikesCount, setLocalLikesCount] = useState(quote.likes_count || 0);
   const [localDislikesCount, setLocalDislikesCount] = useState(quote.dislikes_count || 0);
@@ -31,10 +33,10 @@ export default function QuoteCard({ quote, onReactionUpdate }) {
   }, [quote.likes_count, quote.dislikes_count, quote.userReaction]);
 
   const handleReaction = async (reactionType) => {
-    if (!isAuthenticated) return;
+    if (!user) return;
 
     const isLike = reactionType === 'like';
-    const setIsLoading = isLike ? setIsLiking : setIsDisliking;
+    const setIsLoading = isLike ? setIsReacting : setIsReacting;
     
     setIsLoading(true);
     
@@ -82,8 +84,8 @@ export default function QuoteCard({ quote, onReactionUpdate }) {
         setUserReaction(result.userReaction);
       }
       
-      if (onReactionUpdate) {
-        onReactionUpdate(quote.id, result);
+      if (onReaction) {
+        onReaction(quote.id, result);
       }
     } catch (error) {
       console.error('Failed to update reaction:', error);
@@ -120,10 +122,10 @@ export default function QuoteCard({ quote, onReactionUpdate }) {
           <div className="flex items-center space-x-1">
             <User className="h-4 w-4" />
             <Link 
-              href={`/quotes/user/${quote.author_id}`}
+              href={`/quotes/user/${authorId}`}
               className="hover:text-red-500 transition-colors"
             >
-              {quote.author_username || quote.author?.username || 'Anonymous'}
+              {authorUsername || 'Anonymous'}
             </Link>
           </div>
           
@@ -134,48 +136,50 @@ export default function QuoteCard({ quote, onReactionUpdate }) {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center space-x-2">
-          {/* Like Button */}
-          <Button
-            variant={hasLiked ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => handleReaction('like')}
-            disabled={!isAuthenticated || isLiking}
-            loading={isLiking}
-            className={`flex items-center space-x-1 ${
-              hasLiked ? 'bg-red-500 hover:bg-red-600' : ''
-            }`}
-          >
-            <ThumbsUp className="h-4 w-4" />
-            <span>{localLikesCount}</span>
-          </Button>
+        {showActions && (
+          <div className="flex items-center space-x-2">
+            {/* Like Button */}
+            <Button
+              variant={hasLiked ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => handleReaction('like')}
+              disabled={!user || isReacting}
+              loading={isReacting}
+              className={`flex items-center space-x-1 ${
+                hasLiked ? 'bg-red-500 hover:bg-red-600' : ''
+              }`}
+            >
+              <ThumbsUp className="h-4 w-4" />
+              <span>{localLikesCount}</span>
+            </Button>
 
-          {/* Dislike Button */}
-          <Button
-            variant={hasDisliked ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => handleReaction('dislike')}
-            disabled={!isAuthenticated || isDisliking}
-            loading={isDisliking}
-            className={`flex items-center space-x-1 ${
-              hasDisliked ? 'bg-gray-500 hover:bg-gray-600' : ''
-            }`}
-          >
-            <ThumbsDown className="h-4 w-4" />
-            <span>{localDislikesCount}</span>
-          </Button>
+            {/* Dislike Button */}
+            <Button
+              variant={hasDisliked ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => handleReaction('dislike')}
+              disabled={!user || isReacting}
+              loading={isReacting}
+              className={`flex items-center space-x-1 ${
+                hasDisliked ? 'bg-gray-500 hover:bg-gray-600' : ''
+              }`}
+            >
+              <ThumbsDown className="h-4 w-4" />
+              <span>{localDislikesCount}</span>
+            </Button>
 
-          {/* Owner Actions */}
-          {isOwner && (
-            <div className="flex items-center space-x-2 ml-2">
-              <Link href={`/quotes/${quote.id}/edit`}>
-                <Button variant="outline" size="sm">
-                  Edit
-                </Button>
-              </Link>
-            </div>
-          )}
-        </div>
+            {/* Owner Actions */}
+            {isOwner && (
+              <div className="flex items-center space-x-2 ml-2">
+                <Link href={`/quotes/${quote.id}/edit`}>
+                  <Button variant="outline" size="sm">
+                    Edit
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

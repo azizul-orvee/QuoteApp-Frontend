@@ -1,11 +1,12 @@
+// API Configuration
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5002/api';
 
-// Debug API configuration
-console.log('API Configuration:', {
-  NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
-  API_BASE_URL,
-  NODE_ENV: process.env.NODE_ENV
-});
+// Remove the console.log for production
+// console.log('API Configuration:', {
+//   NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+//   API_BASE_URL,
+//   NODE_ENV: process.env.NODE_ENV
+// });
 
 class ApiError extends Error {
   constructor(message, status) {
@@ -163,7 +164,7 @@ export const authApi = {
   },
   
   getUserProfile: async (userId) => {
-    const response = await apiRequest(`/auth/profile/${userId}`);
+    const response = await apiRequest(`/auth/users/${userId}/profile`);
     
     if (!response || typeof response !== 'object') {
       throw new ApiError('Invalid response format from user profile API', 0);
@@ -314,4 +315,22 @@ export const reactionsApi = {
   dislike: (quoteId) => apiRequest(`/quotes/${quoteId}/dislike`, {
     method: 'POST',
   }),
+};
+
+// Users API calls
+export const usersApi = {
+  getAll: async () => {
+    const response = await apiRequest('/auth/users/stats');
+    return response;
+  },
+  
+  getProfile: async (userId) => {
+    const response = await apiRequest(`/auth/users/${userId}/profile`);
+    return response;
+  },
+  
+  getStats: async (userId) => {
+    const response = await apiRequest(`/auth/users/${userId}/stats`);
+    return response;
+  },
 };
