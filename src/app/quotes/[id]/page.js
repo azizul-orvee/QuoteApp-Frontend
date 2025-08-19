@@ -53,8 +53,8 @@ export default function QuoteDetailPage() {
       // Update the quote with new reaction data
       setQuote(prev => ({
         ...prev,
-        likes: result.likes || prev.likes,
-        dislikes: result.dislikes || prev.dislikes,
+        likes_count: result.likes_count || result.likes || prev.likes_count || prev.likes || 0,
+        dislikes_count: result.dislikes_count || result.dislikes || prev.dislikes_count || prev.dislikes || 0,
         userReaction: result.userReaction,
       }));
     } catch (error) {
@@ -106,7 +106,7 @@ export default function QuoteDetailPage() {
     );
   }
 
-  const isOwner = user?.id === quote.userId;
+  const isOwner = user?.id === quote.author_id || user?.id === quote.userId;
   const hasLiked = quote.userReaction === 'like';
   const hasDisliked = quote.userReaction === 'dislike';
 
@@ -137,16 +137,16 @@ export default function QuoteDetailPage() {
               <div className="flex items-center space-x-2">
                 <User className="h-5 w-5" />
                 <Link 
-                  href={`/quotes/user/${quote.userId}`}
+                  href={`/quotes/user/${quote.author_id || quote.userId}`}
                   className="hover:text-red-500 transition-colors font-medium"
                 >
-                  {quote.user?.username || 'Anonymous'}
+                  {quote.author_username || quote.user?.username || 'Anonymous'}
                 </Link>
               </div>
               
               <div className="flex items-center space-x-2">
                 <Calendar className="h-5 w-5" />
-                <span>{formatDate(quote.createdAt)}</span>
+                <span>{formatDate(quote.created_at || quote.createdAt)}</span>
               </div>
             </div>
           </div>
@@ -164,7 +164,7 @@ export default function QuoteDetailPage() {
               }`}
             >
               <ThumbsUp className="h-5 w-5" />
-              <span>{quote.likes || 0}</span>
+              <span>{quote.likes_count || quote.likes || 0}</span>
             </Button>
 
             <Button
@@ -178,7 +178,7 @@ export default function QuoteDetailPage() {
               }`}
             >
               <ThumbsDown className="h-5 w-5" />
-              <span>{quote.dislikes || 0}</span>
+              <span>{quote.dislikes_count || quote.dislikes || 0}</span>
             </Button>
           </div>
 
@@ -218,7 +218,7 @@ export default function QuoteDetailPage() {
               </Link>
             )}
             
-            <Link href={`/quotes/user/${quote.userId}`}>
+            <Link href={`/quotes/user/${quote.author_id || quote.userId}`}>
               <Button variant="outline" className="w-full h-12">
                 View User's Quotes
               </Button>
